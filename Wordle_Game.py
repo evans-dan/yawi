@@ -1,35 +1,43 @@
 global_word_list_file = 'words.txt'
+#global_word_list_file = 'words_wordle_nytimes.txt'
 class Wordle_Game:
     """
     A single game of Wordle
-    Does not implement 'hard mode' where any revealed hints must be used in subsequent guesses
+    Does not implement 'hard mode' where any revealed hints must be used in
+    subsequent guesses
     """
     import random
 
-
-
     def __init__(self, max_rounds=6, word_length=5, word_list_file=global_word_list_file):
+        """
+        Create a new Wordle_Game object.
+        Inputs: Default settings are Wordle-like, with a default word list as
+            the five-letter words found in /usr/share/dict/words on an Ubuntu
+            20 machine; word_list_file can be any readable file with one word
+            per line; words will be size-checked during file parsing.
+        Outputs: a Wordle_Game object ready to take guesses and play.
+        """
         self.max_rounds = max_rounds
         self.word_list_file = global_word_list_file
         self.round_counter = 0
         self.word_length = word_length
-        self.word_list = self.parse_word_list()
+        self.word_list = self._parse_word_list()
         self.guesses = []
         self.scores = []
-        self.secret_word = '' # the word a player is trying to guess
+        self.__secret_word = '' # the word a player is trying to guess. Not available outside the class
         self.game_won = None # set to true when the secret word is guessed; false if round limit is hit before that happens
-        self.choose_secret_word() # grab a word after the list is initialized
+        self.messages = [] # all  output from interactions with the game are appended here
+        self._choose_secret_word() # grab a word after the list is initialized
 
-    def choose_secret_word(self):
+    def _choose_secret_word(self):
         """
         Sets the secret word as a random word from the list of words in self.word_list
         Inputs: None
         Outputs: none; changes local attributes
         """
-        secret_word_index = self.random.randint(0,len(self.word_list))
-        self.secret_word = self.word_list[secret_word_index]
+        self.__secret_word = self.word_list[self.random.randint(0,len(self.word_list))]
 
-    def parse_word_list(self):
+    def _parse_word_list(self):
         """
         Parse the supplied word list file into a list. Parses the value stored in self.word_list_file
         Inputs: None
@@ -39,7 +47,6 @@ class Wordle_Game:
         with open(self.word_list_file, "r") as fh:
             word = fh.readline()
             while word: # for each word in the file
-
                 word = str.strip(word).upper()
 
                 if(len(word) == self.word_length):
@@ -55,33 +62,33 @@ class Wordle_Game:
         """
         Parse a single guess from the player, score it, and return the result.
         Inputs: a single string
-        Outputs: The scoring string; success, failure, or error messages. Changes local attribtes.
+        Outputs: Adds result messages to the local messages queue: scoring, and
+            success/failure/error messages.
         """
 
-        if guess.upper() not in self.word_list: # don't hold guesses not in the word list against the player
+        if self.game_won is None: # the game hasn't been won or lost yet
 
-            print("{0} not a legal guess, round count still {1}".format(guess.upper(), self.round_counter))
+            if guess.upper() not in self.word_list: # don't hold guesses not in the word list against the player
 
-        else:
-
-            self.round_counter += 1
-            self.guesses.append(guess.upper())
-            self.scores.append(self.score_guess())
-            print("Result: {0}".format(self.scores[-1]))
-
-            if self.guesses[-1] == self.secret_word: # player guessed the secret word!
-
-                print("Congratulations! You guessed correctly in round {0}".format(self.round_counter))
-                self.game_won = True
+                self.messages.append("{0} not a legal guess, round count still {1}".format(guess.upper(), self.round_counter))
 
             else:
 
-                if self.round_counter == self.max_rounds: # that was the last round, so no more guessing
+                self.round_counter += 1
+                self.guesses.append(guess.upper())
+                self.messages.append(self._score_guess())
 
-                    print("Sorry, you didn't guess the secret word {0}. :(".format(self.secret_word))
-                    self.game_won = False
+                if self.guesses[-1] == self.__secret_word: # player guessed the secret word!
 
-    def score_guess(self):
+                    self.game_won = True
+
+                else:
+
+                    if self.round_counter == self.max_rounds: # that was the last round, so no more guessing
+
+                        self.game_won = False
+
+    def _score_guess(self):
         """
         Score the guess. This will include letters that are:
             right (right letter, right place): upper case
@@ -96,9 +103,9 @@ class Wordle_Game:
         answer = ''
 
         for i in range(len(guess)):
-            if guess[i] == self.secret_word[i]:
+            if guess[i] == self.__secret_word[i]:
                 guess_score.append(guess[i].upper())
-            elif guess[i] in self.secret_word:
+            elif guess[i] in self.__secret_word:
                 guess_score.append(guess[i].lower())
             else:
                 guess_score.append('.')
