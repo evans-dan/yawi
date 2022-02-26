@@ -38,7 +38,7 @@ class Wordle_Game:
         Inputs: None
         Outputs: none; changes local attributes
         """
-        self.__secret_word = self.word_list[self.random.randint(0,len(self.word_list))]
+        self.__secret_word = self.random.choice(self.word_list)
 
     def _parse_word_list(self):
         """
