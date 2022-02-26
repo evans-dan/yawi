@@ -15,11 +15,16 @@ class Wordle_Game:
             per line; words will be size-checked during file parsing.
         Outputs: a Wordle_Game object ready to take guesses and play.
         """
+        # Game constants:
         self.max_rounds = max_rounds
-        self.word_list_file = word_list_file
-        self.round_counter = 0
         self.word_length = word_length
+        self.word_list_file = word_list_file
+
+        # Word lists:
         self.word_list = self._parse_word_list()
+
+        # Game state:
+        self.round_counter = 0
         self.guesses = []
         self.scores = []
         self.__secret_word = '' # the word a player is trying to guess. Not available outside the class
