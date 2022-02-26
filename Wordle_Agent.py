@@ -3,10 +3,11 @@ class Wordle_Agent:
     Base class shared by all agents capable of playing the game implemented in
     Wordle_Game.
     """
-    def __init__(self, game):
+    def __init__(self, game, debug=False):
         """
         Things shared by all Agents
         """
+        self.debug = debug
         self.guesses = [] # list of guesses made
         self.results = [] # list of guess results/scores
         self.word_list = [] # the list of possible words

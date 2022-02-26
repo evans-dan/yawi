@@ -5,8 +5,9 @@ class Wordle_Game:
     subsequent guesses
     """
     import random
+    import sys
 
-    def __init__(self, max_rounds=6, word_length=5, word_list_file='words.txt', answer_list_file=None):
+    def __init__(self, max_rounds=6, word_length=5, word_list_file='words.txt', answer_list_file=None, debug=False):
         """
         Create a new Wordle_Game object.
         Inputs: Default settings are Wordle-like, with a default word list as
@@ -16,6 +17,7 @@ class Wordle_Game:
         Outputs: a Wordle_Game object ready to take guesses and play.
         """
         # Game constants:
+        self.debug = debug
         self.max_rounds = max_rounds
         self.word_length = word_length
         self.word_list_file = word_list_file
@@ -48,6 +50,8 @@ class Wordle_Game:
         if len(word_list) == 0:
                 word_list = list(self.word_list)
         self.__secret_word = self.random.choice(word_list)
+        if self.debug:
+                print(f"Secret word is {self.__secret_word}", file=self.sys.stderr)
 
     def _parse_word_list(self, pathname):
         """

@@ -6,13 +6,15 @@ class Wordle_Agent_LetterFreq(Wordle_Agent):
     of letters in the word list.
     """
     import re
-    def __init__(self, game):
+    import sys
+
+    def __init__(self, game, debug=False):
         """
         Augment the base class for this type of Agent
         Inputs: a Wordle_Game object
         Outputs: None. Modifies local attributes.
         """
-        super().__init__(game) # instantiate the base class
+        super().__init__(game, debug=debug) # instantiate the base class
         self.letter_counts = {} # position independent letter counts
         self.letter_freqs = {}  # position independent letter frequencies
         self.remaining_word_scores = {} # the remaining words and their scores. Starts full and will be reduced
@@ -192,12 +194,18 @@ class Wordle_Agent_LetterFreq(Wordle_Agent):
         """
         while game.game_won is None: # until win or loss
 
+            if self.debug:
+                print(f"New round: {self}", file=self.sys.stderr)
+
             # set up the letter frequencies and word scores based on the current word list
             self._calculate_letter_freqs() # calculate letter frequencies from words in the word list
             self._calculate_word_freq_scores() # calculate a score for each word in the list
 
             # choose the best starting word
             best_word = self._get_best_scoring_word()
+
+            if self.debug:
+                print(f"Guessing {best_word}", file=self.sys.stderr)
 
             # submit our current best guess and remove from further consideration
             game.parse_guess(best_word)
