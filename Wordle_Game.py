@@ -21,7 +21,7 @@ class Wordle_Game:
         self.word_list_file = word_list_file
 
         # Word lists:
-        self.word_list = self._parse_word_list()
+        self.word_list = self._parse_word_list(self.word_list_file)
 
         # Game state:
         self.round_counter = 0
@@ -40,20 +40,21 @@ class Wordle_Game:
         """
         self.__secret_word = self.random.choice(self.word_list)
 
-    def _parse_word_list(self):
+    def _parse_word_list(self, pathname):
         """
-        Parse the supplied word list file into a list. Parses the value stored in self.word_list_file
+        Parse the supplied word list file into a list. Opens and parses the specified pathname.
         Inputs: None
-        Outputs: a list of words from the global word source that match the defined word length
+        Outputs: a list of uppercased words from the word source that match the defined word length
         """
         wl = []
-        with open(self.word_list_file, "r") as fh:
+        if pathname == None:
+               return wl
+        with open(pathname, "r") as fh:
             word = fh.readline()
             while word: # for each word in the file
                 word = str.strip(word).upper()
 
                 if(len(word) == self.word_length):
-
                     wl.append(word)
 
                 word = fh.readline()
