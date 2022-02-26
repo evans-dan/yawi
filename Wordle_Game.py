@@ -111,17 +111,29 @@ class Wordle_Game:
         Outputs: scoring string of upper/lower/dot characters.
         """
 
-        guess_score = []
-        guess = self.guesses[-1]
-        answer = ''
+        guess_score = ['.'] * self.word_length
+        guess = list(self.guesses[-1])
+        secret = list(self.__secret_word)
 
-        for i in range(len(guess)):
-            if guess[i] == self.__secret_word[i]:
-                guess_score.append(guess[i].upper())
-            elif guess[i] in self.__secret_word:
-                guess_score.append(guess[i].lower())
-            else:
-                guess_score.append('.')
+        # Matching must be done in phases to avoid over-crediting a letter
+        # or a position. For example, when the same letter appears twice in
+        # a guess, but only once in the answer: the second letter is a miss
+        # not a mismatch.
+
+        # Find all exact matches. On match, remove letter from future matching
+        # but retain letter positions.
+        for i in range(self.word_length):
+            if guess[i] == secret[i]:
+                guess_score[i] = guess[i].upper()
+                guess[i] = ' '
+                secret[i] = ' '
+
+        # Find any still-matchable but misplaced letters, removing them from
+        # future consideration.
+        for i in range(self.word_length):
+            if guess[i] != ' ' and guess[i] in secret:
+                guess_score[i] = guess[i].lower()
+                secret.remove(guess[i])
 
         return "".join(guess_score)
 
