@@ -78,6 +78,9 @@ class Wordle_Agent_LetterFreq(Wordle_Agent):
         self.letter_counts = {}
         self.letter_freqs = {}
 
+        if len(self.remaining_word_scores) == 0:
+                raise ValueError("Oops, I ran out of options. My algorithm is broken?")
+
         for w in self.remaining_word_scores.keys(): # for each remaining word
 
             for i in range(self.word_length): # for each position
