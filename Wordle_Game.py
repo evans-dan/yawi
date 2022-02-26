@@ -1,5 +1,3 @@
-global_word_list_file = 'words.txt'
-#global_word_list_file = 'words_wordle_nytimes.txt'
 class Wordle_Game:
     """
     A single game of Wordle
@@ -8,7 +6,7 @@ class Wordle_Game:
     """
     import random
 
-    def __init__(self, max_rounds=6, word_length=5, word_list_file=global_word_list_file):
+    def __init__(self, max_rounds=6, word_length=5, word_list_file='words.txt'):
         """
         Create a new Wordle_Game object.
         Inputs: Default settings are Wordle-like, with a default word list as
@@ -18,7 +16,7 @@ class Wordle_Game:
         Outputs: a Wordle_Game object ready to take guesses and play.
         """
         self.max_rounds = max_rounds
-        self.word_list_file = global_word_list_file
+        self.word_list_file = word_list_file
         self.round_counter = 0
         self.word_length = word_length
         self.word_list = self._parse_word_list()
