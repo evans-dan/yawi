@@ -122,5 +122,10 @@ class Wordle_Game:
         Inputs: none.
         Outputs: string representation of some of the game settings
         """
+        report = f"Wordle Game (maximum rounds={self.max_rounds}"
+        report += f", word length={self.word_length}"
+        report += f", word list={self.word_list_file}"
+        report += f", word count={len(self.word_list)}"
+        report += ")"
 
-        return "Wordle Game (maximum rounds=" + str(self.max_rounds) + ", word length=" + str(self.word_length) + ", word list=" + str(self.word_list_file) + ", word count=" + str(len(self.word_list)) + ")"
+        return report
