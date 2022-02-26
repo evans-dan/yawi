@@ -21,7 +21,7 @@ class Wordle_Game:
         self.word_list_file = word_list_file
 
         # Word lists:
-        self.word_list = self._parse_word_list(self.word_list_file)
+        self.word_list = set(self._parse_word_list(self.word_list_file))
 
         # Game state:
         self.round_counter = 0
@@ -38,7 +38,7 @@ class Wordle_Game:
         Inputs: None
         Outputs: none; changes local attributes
         """
-        self.__secret_word = self.random.choice(self.word_list)
+        self.__secret_word = self.random.choice(list(self.word_list))
 
     def _parse_word_list(self, pathname):
         """
