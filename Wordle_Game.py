@@ -6,7 +6,7 @@ class Wordle_Game:
     """
     import random
 
-    def __init__(self, max_rounds=6, word_length=5, word_list_file='words.txt'):
+    def __init__(self, max_rounds=6, word_length=5, word_list_file='words.txt', answer_list_file=None):
         """
         Create a new Wordle_Game object.
         Inputs: Default settings are Wordle-like, with a default word list as
@@ -19,9 +19,14 @@ class Wordle_Game:
         self.max_rounds = max_rounds
         self.word_length = word_length
         self.word_list_file = word_list_file
+        self.answer_list_file = answer_list_file
 
         # Word lists:
         self.word_list = set(self._parse_word_list(self.word_list_file))
+        # If a dedicated answer list is used, append it to the word list.
+        self.answer_list = self._parse_word_list(self.answer_list_file)
+        if len(self.answer_list):
+                self.word_list.update(self.answer_list)
 
         # Game state:
         self.round_counter = 0
@@ -38,7 +43,11 @@ class Wordle_Game:
         Inputs: None
         Outputs: none; changes local attributes
         """
-        self.__secret_word = self.random.choice(list(self.word_list))
+        # Use the dedicated answer list if there is one, otherwise use the full word list.
+        word_list = self.answer_list
+        if len(word_list) == 0:
+                word_list = list(self.word_list)
+        self.__secret_word = self.random.choice(word_list)
 
     def _parse_word_list(self, pathname):
         """
@@ -126,6 +135,9 @@ class Wordle_Game:
         report += f", word length={self.word_length}"
         report += f", word list={self.word_list_file}"
         report += f", word count={len(self.word_list)}"
+        if len(self.answer_list):
+                report += f", answer list={self.answer_list_file}"
+                report += f", answer count={len(self.answer_list)}"
         report += ")"
 
         return report
