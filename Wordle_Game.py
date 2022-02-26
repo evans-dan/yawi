@@ -141,3 +141,110 @@ class Wordle_Game:
         report += ")"
 
         return report
+
+
+import unittest
+
+class Test_Wordle_Game(unittest.TestCase):
+        import tempfile
+
+        def test_bad_word_list(self):
+                with self.assertRaisesRegex(FileNotFoundError, r"::NOPE::"):
+                        game = Wordle_Game(word_list_file='::NOPE::')
+
+        def test_bad_answer_list(self):
+                with self.assertRaisesRegex(FileNotFoundError, r"::MISSING::"):
+                        game = Wordle_Game(answer_list_file='::MISSING::')
+
+        def make_word_file(self, word_list):
+                if len(word_list) == 0:
+                        return None
+                word_file = self.tempfile.NamedTemporaryFile(mode="wt")
+                for word in word_list:
+                        print(word, file=word_file)
+                word_file.flush()
+                return word_file
+
+        def validate_words(self, word_list, expected):
+                self.assertEqual(len(word_list), len(expected))
+                for word in expected:
+                        self.assertTrue(word in word_list)
+
+        def test_uppercasing(self):
+                incoming = ["drink", "vOdKa", "YUMMY"]
+                expected = ["DRINK", "VODKA", "YUMMY"]
+
+                word_file = self.make_word_file(incoming)
+                game = Wordle_Game(word_list_file=word_file.name)
+                self.validate_words(game.word_list, expected)
+
+        def test_word_length_respected(self):
+                incoming = ["give", "me", "all", "you", "got", "right", "now", "dude"]
+                expected = ["GIVE", "DUDE"]
+
+                word_file = self.make_word_file(incoming)
+                game = Wordle_Game(word_length=4, word_list_file=word_file.name)
+                self.validate_words(game.word_list, expected)
+
+        def test_duplicates_eliminated(self):
+                incoming = ["OnE", "Two", "oNe"]
+                expected = ["ONE", "TWO"]
+
+                word_file = self.make_word_file(incoming)
+                game = Wordle_Game(word_length=3, word_list_file=word_file.name)
+                self.validate_words(game.word_list, expected)
+
+        def test_guess_score(self):
+                # "guess" must be non-empty to initialize the game, but it will
+                # be ignored because we're calling _score_guess directly.
+                guesses = ["hello"]
+                answers = ["vivid"]
+                expected = [
+                                ["snack", "....."],
+                                ["wordy", "...d."],
+                                ["votes", "V...."],
+                                ["irate", "i...."],
+                                ["igigi", "i.i.."],
+                                ["vitai", "VI..i"],
+                                ["vidai", "VId.i"],
+                                ["divid", ".IVID"],
+                                ["viviv", "VIVI."],
+                        ]
+
+                guess_file = self.make_word_file(guesses)
+                answer_file = self.make_word_file(answers)
+
+                game = Wordle_Game(max_rounds=len(expected), word_list_file=guess_file.name, answer_list_file=answer_file.name)
+
+                for guess, score in expected:
+                        game.guesses.append(guess.upper())
+                        self.assertEqual(score, game._score_guess())
+
+        def test_choose_from_answer_list(self):
+                guesses = ["eeeeK", "nopes", "sosad"]
+                answers = ["goody", "smart", "wheee"]
+
+                guess_file = self.make_word_file(guesses)
+                answer_file = self.make_word_file(answers)
+
+                # Selected word must be in answers if answer list given.
+                game = Wordle_Game(word_list_file=guess_file.name, answer_list_file=answer_file.name)
+                won = False
+                for word in answers:
+                        game.parse_guess(word.lower())
+                        if game.game_won:
+                                won = True
+                self.assertTrue(won)
+
+                # Selected word must be in guesses if no answer list given.
+                game = Wordle_Game(word_list_file=guess_file.name)
+                won = False
+                for word in guesses:
+                        game.parse_guess(word.lower())
+                        if game.game_won:
+                                won = True
+                self.assertTrue(won)
+
+
+if __name__ == '__main__':
+    unittest.main()
