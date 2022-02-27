@@ -3,10 +3,11 @@ class Wordle_Agent:
     Base class shared by all agents capable of playing the game implemented in
     Wordle_Game.
     """
-    def __init__(self, game):
+    def __init__(self, game, debug=False):
         """
         Things shared by all Agents
         """
+        self.debug = debug
         self.guesses = [] # list of guesses made
         self.results = [] # list of guess results/scores
         self.word_list = [] # the list of possible words
@@ -35,16 +36,45 @@ class Wordle_Agent:
         Inputs: a score string from passing a guess to a Wordle_Game object.
         Outputs: none; changes local attributes.
         """
-        for i in range(len(self.results[-1])): # for each score character
-            if self.results[-1][i] == '.': # letter is a miss
-                self.incorrect_letters[self.guesses[-1][i].upper()] = 1
-            elif self.results[-1][i] == self.guesses[-1][i].lower(): # right letter, wrong place
-                #self.included_letters[self.guesses[-1][i].lower()] = 1
-                self.included_letters[self.guesses[-1][i].upper()] = 1
-            else: # right letter, right place
-                self.correct_letters[i] = self.guesses[-1][i].upper()
-                if self.correct_letters[i].lower() in self.included_letters: # letter now properly placed, so remove it from included dict
-                    del self.included_letters[self.correct_letters[i].lower()]
+        if self.debug:
+            print(f"Score was {self.results[-1]}", file=self.sys.stderr)
+        results = list(self.results[-1])
+        for i in range(len(results)): # for each score character
+            letter = self.guesses[-1][i].upper()
+            if results[i] == letter: # right letter, right place
+                self.correct_letters[i] = letter
+                results[i] = ' '
+                # letter now properly placed, so remove it from included dict if the count reaches 0
+                if letter in self.included_letters:
+                    self.included_letters[letter] -= 1
+                    if self.included_letters[letter] == 0:
+                        del self.included_letters[letter]
+
+        for i in range(len(results)): # for each score character
+            letter = self.guesses[-1][i].upper()
+            if results[i] == ' ':
+                # Already handled.
+                continue
+            elif results[i] == letter.lower(): # right letter, wrong place
+                self.included_letters.setdefault(letter, 0)
+                self.included_letters[letter] += 1
+                results[i] = ' '
+            elif results[i] == '.': # letter is a miss
+                # Wait for next pass.
+                continue
+            else: # wat
+                raise ValueError("How did this happen?")
+
+        for i in range(len(results)): # for each score character
+            letter = self.guesses[-1][i].upper()
+            if results[i] == ' ':
+                # Already handled.
+                continue
+            elif results[i] == '.': # letter is a miss
+                if not letter in self.correct_letters and not letter in self.included_letters:
+                    self.incorrect_letters[letter] = 1
+            else: # wat
+                raise ValueError("How did this happen?")
 
     def play(self, game):
         """

@@ -1,5 +1,3 @@
-global_word_list_file = 'words.txt'
-#global_word_list_file = 'words_wordle_nytimes.txt'
 class Wordle_Game:
     """
     A single game of Wordle
@@ -7,8 +5,9 @@ class Wordle_Game:
     subsequent guesses
     """
     import random
+    import sys
 
-    def __init__(self, max_rounds=6, word_length=5, word_list_file=global_word_list_file):
+    def __init__(self, max_rounds=6, word_length=5, word_list_file='words.txt', answer_list_file=None, debug=False):
         """
         Create a new Wordle_Game object.
         Inputs: Default settings are Wordle-like, with a default word list as
@@ -17,11 +16,22 @@ class Wordle_Game:
             per line; words will be size-checked during file parsing.
         Outputs: a Wordle_Game object ready to take guesses and play.
         """
+        # Game constants:
+        self.debug = debug
         self.max_rounds = max_rounds
-        self.word_list_file = global_word_list_file
-        self.round_counter = 0
         self.word_length = word_length
-        self.word_list = self._parse_word_list()
+        self.word_list_file = word_list_file
+        self.answer_list_file = answer_list_file
+
+        # Word lists:
+        self.word_list = set(self._parse_word_list(self.word_list_file))
+        # If a dedicated answer list is used, append it to the word list.
+        self.answer_list = self._parse_word_list(self.answer_list_file)
+        if len(self.answer_list):
+                self.word_list.update(self.answer_list)
+
+        # Game state:
+        self.round_counter = 0
         self.guesses = []
         self.scores = []
         self.__secret_word = '' # the word a player is trying to guess. Not available outside the class
@@ -35,22 +45,29 @@ class Wordle_Game:
         Inputs: None
         Outputs: none; changes local attributes
         """
-        self.__secret_word = self.word_list[self.random.randint(0,len(self.word_list))]
+        # Use the dedicated answer list if there is one, otherwise use the full word list.
+        word_list = self.answer_list
+        if len(word_list) == 0:
+                word_list = list(self.word_list)
+        self.__secret_word = self.random.choice(word_list)
+        if self.debug:
+                print(f"Secret word is {self.__secret_word}", file=self.sys.stderr)
 
-    def _parse_word_list(self):
+    def _parse_word_list(self, pathname):
         """
-        Parse the supplied word list file into a list. Parses the value stored in self.word_list_file
+        Parse the supplied word list file into a list. Opens and parses the specified pathname.
         Inputs: None
-        Outputs: a list of words from the global word source that match the defined word length
+        Outputs: a list of uppercased words from the word source that match the defined word length
         """
         wl = []
-        with open(self.word_list_file, "r") as fh:
+        if pathname == None:
+               return wl
+        with open(pathname, "r") as fh:
             word = fh.readline()
             while word: # for each word in the file
                 word = str.strip(word).upper()
 
                 if(len(word) == self.word_length):
-
                     wl.append(word)
 
                 word = fh.readline()
@@ -98,17 +115,29 @@ class Wordle_Game:
         Outputs: scoring string of upper/lower/dot characters.
         """
 
-        guess_score = []
-        guess = self.guesses[-1]
-        answer = ''
+        guess_score = ['.'] * self.word_length
+        guess = list(self.guesses[-1])
+        secret = list(self.__secret_word)
 
-        for i in range(len(guess)):
-            if guess[i] == self.__secret_word[i]:
-                guess_score.append(guess[i].upper())
-            elif guess[i] in self.__secret_word:
-                guess_score.append(guess[i].lower())
-            else:
-                guess_score.append('.')
+        # Matching must be done in phases to avoid over-crediting a letter
+        # or a position. For example, when the same letter appears twice in
+        # a guess, but only once in the answer: the second letter is a miss
+        # not a mismatch.
+
+        # Find all exact matches. On match, remove letter from future matching
+        # but retain letter positions.
+        for i in range(self.word_length):
+            if guess[i] == secret[i]:
+                guess_score[i] = guess[i].upper()
+                guess[i] = ' '
+                secret[i] = ' '
+
+        # Find any still-matchable but misplaced letters, removing them from
+        # future consideration.
+        for i in range(self.word_length):
+            if guess[i] != ' ' and guess[i] in secret:
+                guess_score[i] = guess[i].lower()
+                secret.remove(guess[i])
 
         return "".join(guess_score)
 
@@ -118,5 +147,120 @@ class Wordle_Game:
         Inputs: none.
         Outputs: string representation of some of the game settings
         """
+        report = f"Wordle Game (maximum rounds={self.max_rounds}"
+        report += f", word length={self.word_length}"
+        report += f", word list={self.word_list_file}"
+        report += f", word count={len(self.word_list)}"
+        if len(self.answer_list):
+                report += f", answer list={self.answer_list_file}"
+                report += f", answer count={len(self.answer_list)}"
+        report += ")"
 
-        return "Wordle Game (maximum rounds=" + str(self.max_rounds) + ", word length=" + str(self.word_length) + ", word list=" + str(self.word_list_file) + ", word count=" + str(len(self.word_list)) + ")"
+        return report
+
+
+import unittest
+
+class Test_Wordle_Game(unittest.TestCase):
+        import tempfile
+
+        def test_bad_word_list(self):
+                with self.assertRaisesRegex(FileNotFoundError, r"::NOPE::"):
+                        game = Wordle_Game(word_list_file='::NOPE::')
+
+        def test_bad_answer_list(self):
+                with self.assertRaisesRegex(FileNotFoundError, r"::MISSING::"):
+                        game = Wordle_Game(answer_list_file='::MISSING::')
+
+        def make_word_file(self, word_list):
+                if len(word_list) == 0:
+                        return None
+                word_file = self.tempfile.NamedTemporaryFile(mode="wt")
+                for word in word_list:
+                        print(word, file=word_file)
+                word_file.flush()
+                return word_file
+
+        def validate_words(self, word_list, expected):
+                self.assertEqual(len(word_list), len(expected))
+                for word in expected:
+                        self.assertTrue(word in word_list)
+
+        def test_uppercasing(self):
+                incoming = ["drink", "vOdKa", "YUMMY"]
+                expected = ["DRINK", "VODKA", "YUMMY"]
+
+                word_file = self.make_word_file(incoming)
+                game = Wordle_Game(word_list_file=word_file.name)
+                self.validate_words(game.word_list, expected)
+
+        def test_word_length_respected(self):
+                incoming = ["give", "me", "all", "you", "got", "right", "now", "dude"]
+                expected = ["GIVE", "DUDE"]
+
+                word_file = self.make_word_file(incoming)
+                game = Wordle_Game(word_length=4, word_list_file=word_file.name)
+                self.validate_words(game.word_list, expected)
+
+        def test_duplicates_eliminated(self):
+                incoming = ["OnE", "Two", "oNe"]
+                expected = ["ONE", "TWO"]
+
+                word_file = self.make_word_file(incoming)
+                game = Wordle_Game(word_length=3, word_list_file=word_file.name)
+                self.validate_words(game.word_list, expected)
+
+        def test_guess_score(self):
+                # "guess" must be non-empty to initialize the game, but it will
+                # be ignored because we're calling _score_guess directly.
+                guesses = ["hello"]
+                answers = ["vivid"]
+                expected = [
+                                ["snack", "....."],
+                                ["wordy", "...d."],
+                                ["votes", "V...."],
+                                ["irate", "i...."],
+                                ["igigi", "i.i.."],
+                                ["vitai", "VI..i"],
+                                ["vidai", "VId.i"],
+                                ["divid", ".IVID"],
+                                ["viviv", "VIVI."],
+                        ]
+
+                guess_file = self.make_word_file(guesses)
+                answer_file = self.make_word_file(answers)
+
+                game = Wordle_Game(max_rounds=len(expected), word_list_file=guess_file.name, answer_list_file=answer_file.name)
+
+                for guess, score in expected:
+                        game.guesses.append(guess.upper())
+                        self.assertEqual(score, game._score_guess())
+
+        def test_choose_from_answer_list(self):
+                guesses = ["eeeeK", "nopes", "sosad"]
+                answers = ["goody", "smart", "wheee"]
+
+                guess_file = self.make_word_file(guesses)
+                answer_file = self.make_word_file(answers)
+
+                # Selected word must be in answers if answer list given.
+                game = Wordle_Game(word_list_file=guess_file.name, answer_list_file=answer_file.name)
+                won = False
+                for word in answers:
+                        game.parse_guess(word.lower())
+                        if game.game_won:
+                                won = True
+                self.assertTrue(won)
+
+                # Selected word must be in guesses if no answer list given.
+                game = Wordle_Game(word_list_file=guess_file.name)
+                won = False
+                for word in guesses:
+                        game.parse_guess(word.lower())
+                        if game.game_won:
+                                won = True
+                self.assertTrue(won)
+
+
+if __name__ == '__main__':
+    unittest.main()
