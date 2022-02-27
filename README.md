@@ -36,3 +36,5 @@ walf.play(wg)
   - di/tri-gram frequency
   - an ML-based approach that learns the rules
 - implement "hard mode"
+- improved testing
+  - create a Wordle_Game object mode for testing that allows for the external setting of the secret word so specific scoring outcomes can be confirmed
