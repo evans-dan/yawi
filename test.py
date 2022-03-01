@@ -14,3 +14,8 @@ print(walf)
 #help(walf)
 
 walf.play(wg)
+
+from Wordle_Benchmark import Wordle_Benchmark
+wb = Wordle_Benchmark(debug=True, rounds=100)
+print(wb)
+wb.start_benchmark()
