@@ -221,16 +221,17 @@ class Wordle_Agent_LetterFreq(Wordle_Agent):
 
         self.outcome = game.game_won
 
-        for i in range(len(self.guesses)):
-            print("Round {0}: guess: {1} score {2}".format(i+1, self.guesses[i], self.results[i]))
+        if self.debug: # get noisy about game state at every step, and outcome
+            for i in range(len(self.guesses)):
+                print("Round {0}: guess: {1} score {2}".format(i+1, self.guesses[i], self.results[i]))
 
-        if self.outcome is True:
+            if self.outcome is True:
 
-            print("Game won.")
+                print("Game won.")
 
-        else:
+            else:
 
-            print("Game lost.")
+                print("Game lost.")
 
     def __str__(self):
         """
