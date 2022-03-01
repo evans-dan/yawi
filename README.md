@@ -7,6 +7,9 @@ the base class for the game itself.
 Version 0.1 - the base game and a single Agent
 
 # Release Notes
+* v0.2 (2022-03-01)
+  * modified the Wordle_Game class to hide some status message unless debug is True
+  * created Wordle_Benchmark class, and added it to the integration testing in test.py. This will be used in later work to compare two Agents.
 * v0.1 (2022-02-24)
   * modification of the base Wordle_Game class to hide some internal functions and attributes.
   * Addition of the base Wordle_Agent class as well as the first Agent built off of it, Wordle_Agent_LetterFreq.
@@ -26,6 +29,11 @@ from Wordle_Agent_LetterFreq import Wordle_Agent_LetterFreq
 walf = Wordle_Agent_LetterFreq(wg)
 
 walf.play(wg)
+
+# this will perform benchmarking of an agent (default is a Wordle_Game, with Wordle_Agent_LetterFreq)
+from Wordle_Benchmark import Wordle_Benchmark
+wb = Wordle_Benchmark()
+wb.start_benchmark()
 ```
 
 # Future Development
@@ -36,5 +44,3 @@ walf.play(wg)
   - di/tri-gram frequency
   - an ML-based approach that learns the rules
 - implement "hard mode"
-- improved testing
-  - create a Wordle_Game object mode for testing that allows for the external setting of the secret word so specific scoring outcomes can be confirmed
