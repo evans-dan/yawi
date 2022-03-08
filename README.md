@@ -4,7 +4,7 @@ yawi - Yet Another Wordle Implementation
 Like 63% of the devs on the planet, I decided to make a wordle clone. This is
 the base class for the game itself.
 
-Version 0.3 - the base game and a single Agent
+Version 0.3 - base game with hard mode; unit tests; a single agent
 
 # Release Notes
 * v0.3 (2022-03-07)
