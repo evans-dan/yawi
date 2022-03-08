@@ -7,13 +7,15 @@ class Wordle_Game:
     import random
     import sys
 
-    def __init__(self, max_rounds=6, word_length=5, word_list_file='words.txt', answer_list_file=None, debug=False):
+    def __init__(self, max_rounds=6, word_length=5, word_list_file='words.txt', answer_list_file=None, debug=False, hard_mode=False):
         """
         Create a new Wordle_Game object.
         Inputs: Default settings are Wordle-like, with a default word list as
             the five-letter words found in /usr/share/dict/words on an Ubuntu
             20 machine; word_list_file can be any readable file with one word
             per line; words will be size-checked during file parsing.
+            Hard mode means that any revealed letters (correct or included)
+            must be used in subsequent guesses.
         Outputs: a Wordle_Game object ready to take guesses and play.
         """
         # Game constants:
@@ -37,6 +39,8 @@ class Wordle_Game:
         self.__secret_word = '' # the word a player is trying to guess. Not available outside the class
         self.game_won = None # set to true when the secret word is guessed; false if round limit is hit before that happens
         self.messages = [] # all  output from interactions with the game are appended here
+        self._hard_mode = hard_mode # if True, revealed letters (correct or included) must be used in subsequent guesses
+        self._revealed_letters = [] # a list of letters that have been revealed (either included or correct) for use with hard mode
         self._choose_secret_word() # grab a word after the list is initialized
 
     def _choose_secret_word(self):
@@ -85,11 +89,21 @@ class Wordle_Game:
 
         if self.game_won is None: # the game hasn't been won or lost yet
 
+            valid_word = True
             if guess.upper() not in self.word_list: # don't hold guesses not in the word list against the player
 
-                self.messages.append("{0} not a legal guess, round count still {1}".format(guess.upper(), self.round_counter))
+                self.messages.append(f"{guess.upper()} not a legal guess, round count still {self.round_counter}")
+                valid_word = False
 
-            else:
+            hard_mode_pass = True
+            if self._hard_mode: # ensure guess contains all revealed letters
+
+                for rev_letter in self._revealed_letters:
+                    if rev_letter not in guess:
+                        self.messages.append(f"{guess.upper()} does not include all revealed letters, round count still {self.round_counter}")
+                        hard_mode_pass = False
+
+            if valid_word and hard_mode_pass: # requirements passed, so score the test
 
                 self.round_counter += 1
                 self.guesses.append(guess.upper())
@@ -132,12 +146,18 @@ class Wordle_Game:
                 guess[i] = ' '
                 secret[i] = ' '
 
+                if guess[i] not in self._revealed_letters: # add to list of revealed letters for hard mode
+                    self._revealed_letters.append(guess[i].upper())
+
         # Find any still-matchable but misplaced letters, removing them from
         # future consideration.
         for i in range(self.word_length):
             if guess[i] != ' ' and guess[i] in secret:
                 guess_score[i] = guess[i].lower()
                 secret.remove(guess[i])
+
+                if guess[i] not in self._revealed_letters: # add to list of revealed letters for hard mode
+                    self._revealed_letters.append(guess[i].upper())
 
         return "".join(guess_score)
 
@@ -151,6 +171,7 @@ class Wordle_Game:
         report += f", word length={self.word_length}"
         report += f", word list={self.word_list_file}"
         report += f", word count={len(self.word_list)}"
+        report += f", hard mode={self._hard_mode}"
         if len(self.answer_list):
                 report += f", answer list={self.answer_list_file}"
                 report += f", answer count={len(self.answer_list)}"
@@ -211,30 +232,30 @@ class Test_Wordle_Game(unittest.TestCase):
                 self.validate_words(game.word_list, expected)
 
         def test_guess_score(self):
-                # "guess" must be non-empty to initialize the game, but it will
-                # be ignored because we're calling _score_guess directly.
-                guesses = ["hello"]
-                answers = ["vivid"]
-                expected = [
-                                ["snack", "....."],
-                                ["wordy", "...d."],
-                                ["votes", "V...."],
-                                ["irate", "i...."],
-                                ["igigi", "i.i.."],
-                                ["vitai", "VI..i"],
-                                ["vidai", "VId.i"],
-                                ["divid", ".IVID"],
-                                ["viviv", "VIVI."],
-                        ]
+            # "guess" must be non-empty to initialize the game, but it will
+            # be ignored because we're calling _score_guess directly.
+            guesses = ["hello"]
+            answers = ["vivid"]
+            expected = [
+                            ["snack", "....."],
+                            ["wordy", "...d."],
+                            ["votes", "V...."],
+                            ["irate", "i...."],
+                            ["igigi", "i.i.."],
+                            ["vitai", "VI..i"],
+                            ["vidai", "VId.i"],
+                            ["divid", ".IVID"],
+                            ["viviv", "VIVI."],
+                    ]
 
-                guess_file = self.make_word_file(guesses)
-                answer_file = self.make_word_file(answers)
+            guess_file = self.make_word_file(guesses)
+            answer_file = self.make_word_file(answers)
 
-                game = Wordle_Game(max_rounds=len(expected), word_list_file=guess_file.name, answer_list_file=answer_file.name)
+            game = Wordle_Game(max_rounds=len(expected), word_list_file=guess_file.name, answer_list_file=answer_file.name)
 
-                for guess, score in expected:
-                        game.guesses.append(guess.upper())
-                        self.assertEqual(score, game._score_guess())
+            for guess, score in expected:
+                    game.guesses.append(guess.upper())
+                    self.assertEqual(score, game._score_guess())
 
         def test_choose_from_answer_list(self):
                 guesses = ["eeeeK", "nopes", "sosad"]
@@ -261,6 +282,88 @@ class Test_Wordle_Game(unittest.TestCase):
                                 won = True
                 self.assertTrue(won)
 
+        def test_hard_mode_off(self):
+            """
+            Ensure that the game will work as intended when hard mode is not
+                turned on. This is test_guess_score() with hard_mode=False
+            """
+            # "guess" must be non-empty to initialize the game, but it will
+            # be ignored because we're calling _score_guess directly.
+            guesses = ["hello"]
+            answers = ["vivid"]
+            expected = [
+                            ["snack", "....."],
+                            ["wordy", "...d."],
+                            ["votes", "V...."],
+                            ["irate", "i...."],
+                            ["igigi", "i.i.."],
+                            ["vitai", "VI..i"],
+                            ["vidai", "VId.i"],
+                            ["divid", ".IVID"],
+                            ["viviv", "VIVI."],
+                    ]
+
+            guess_file = self.make_word_file(guesses)
+            answer_file = self.make_word_file(answers)
+
+            game = Wordle_Game(max_rounds=len(expected), word_list_file=guess_file.name, answer_list_file=answer_file.name, hard_mode=False)
+
+
+            for guess, score in expected:
+                    game.guesses.append(guess.upper())
+                    self.assertEqual(score, game._score_guess())
+
+        def test_hard_mode_on_good_guesses(self):
+            """
+            Ensure that hard mode allows guesses that include revealed letters
+            """
+            # "guess" must be non-empty to initialize the game, but it will
+            # be ignored because we're calling _score_guess directly.
+            guesses = ["hello"]
+            answers = ["vivid"]
+            expected = [
+                            ["snack", "....."],
+                            ["wordy", "...d."],
+                            ["dotes", "d...."],
+                            ["loved", "..V.D"],
+                            ["david", "..VID"],
+                            ["vavid", "V.VID"],
+                            ["vivid", "VIVID"]
+                    ]
+
+            guess_file = self.make_word_file(guesses)
+            answer_file = self.make_word_file(answers)
+
+            game = Wordle_Game(max_rounds=len(expected), word_list_file=guess_file.name, answer_list_file=answer_file.name, hard_mode=True)
+
+            for guess, score in expected:
+                    game.guesses.append(guess.upper())
+                    self.assertEqual(score, game._score_guess())
+
+        def test_hard_mode_on_bad_guesses(self):
+            """
+            Ensure that hard mode disallows guesses that do not include revealed letters
+            """
+            # "guess" must be non-empty to initialize the game, but it will
+            # be ignored because we're calling _score_guess directly.
+            guesses = ["hello", "snack", "wordy", "simon", "vivid"]
+            answers = ["vivid"]
+            bad_guesses = [
+                "snack", # reveals nothing, round_count now 1
+                "wordy", # reveals d, round_count now 2
+                "simon" # does not include a d, guess rejected, round_count still 2
+            ]
+
+            guess_file = self.make_word_file(guesses)
+            answer_file = self.make_word_file(answers)
+
+            game = Wordle_Game(max_rounds=len(bad_guesses), word_list_file=guess_file.name, answer_list_file=answer_file.name, hard_mode=True)
+
+            for bg in bad_guesses:
+
+                game.parse_guess(bg)
+
+            self.assertEqual(game.round_counter, 2)
 
 if __name__ == '__main__':
     unittest.main()
